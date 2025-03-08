@@ -1,0 +1,165 @@
+/* AddArtist.css */
+:root {
+	--primary-color: #4a6fa5;
+	--secondary-color: #166088;
+	--accent-color: #4fc3dc;
+	--success-color: #4caf50;
+	--error-color: #f44336;
+	--background-color: #f5f7fa;
+	--card-color: #ffffff;
+	--text-primary: #333333;
+	--text-secondary: #666666;
+	--shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	--border-radius: 8px;
+}
+
+.add-artist-container {
+	max-width: 800px;
+	margin: 2rem auto;
+	padding: 2rem;
+	background-color: var(--card-color);
+	border-radius: var(--border-radius);
+	box-shadow: var(--shadow);
+}
+
+.add-artist-container h2 {
+	color: var(--primary-color);
+	margin-bottom: 1.5rem;
+	padding-bottom: 0.75rem;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+	text-align: center;
+}
+
+.artist-form {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.form-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 1rem;
+}
+
+label {
+	font-weight: 500;
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+}
+
+input,
+select,
+textarea {
+	padding: 0.75rem;
+	border: 1px solid rgba(0, 0, 0, 0.2);
+	border-radius: 4px;
+	font-size: 1rem;
+	transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+	outline: none;
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.2);
+}
+
+input[type='file'] {
+	padding: 0.5rem 0;
+	border: none;
+	background: none;
+}
+
+input[type='date'] {
+	-webkit-appearance: none;
+}
+
+.form-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 1rem;
+	margin-top: 1.5rem;
+}
+
+.cancel-btn,
+.submit-btn {
+	padding: 0.75rem 1.5rem;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: all 0.3s ease;
+}
+
+.cancel-btn {
+	background-color: transparent;
+	border: 1px solid var(--text-secondary);
+	color: var(--text-secondary);
+}
+
+.cancel-btn:hover {
+	background-color: rgba(0, 0, 0, 0.05);
+}
+
+.submit-btn {
+	background-color: var(--primary-color);
+	color: white;
+	border: none;
+}
+
+.submit-btn:hover {
+	background-color: var(--secondary-color);
+}
+
+.submit-btn:disabled {
+	background-color: #cccccc;
+	cursor: not-allowed;
+}
+
+.success-message {
+	background-color: rgba(76, 175, 80, 0.2);
+	color: var(--success-color);
+	padding: 1rem;
+	border-radius: 4px;
+	margin-bottom: 1.5rem;
+	text-align: center;
+	border-left: 4px solid var(--success-color);
+}
+
+.error-message {
+	background-color: rgba(244, 67, 54, 0.2);
+	color: var(--error-color);
+	padding: 1rem;
+	border-radius: 4px;
+	margin-bottom: 1.5rem;
+	text-align: center;
+	border-left: 4px solid var(--error-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.add-artist-container {
+		margin: 1rem;
+		padding: 1.5rem;
+	}
+
+	.form-row {
+		grid-template-columns: 1fr;
+	}
+
+	.form-actions {
+		flex-direction: column;
+	}
+
+	.cancel-btn,
+	.submit-btn {
+		width: 100%;
+	}
+}
