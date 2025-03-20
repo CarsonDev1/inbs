@@ -99,9 +99,17 @@ function Artist() {
 		setSortConfig({ key, direction });
 	};
 
+	// Safe function to get a truncated string with fallback for undefined values
+	const truncateString = (str, length = 8) => {
+		if (!str) return 'N/A'; // Return 'N/A' if the string is undefined or null
+		return `${str.substring(0, length)}...`;
+	};
+
 	const getUniqueStores = () => {
-		const stores = artists.map((artist) => artist.StoreId);
-		return [...new Set(stores)];
+		const storeIds = artists
+			.map((artist) => artist.StoreId)
+			.filter((storeId) => storeId !== null && storeId !== undefined); // Filter out null or undefined values
+		return [...new Set(storeIds)];
 	};
 
 	const toggleAddArtistForm = () => {
@@ -349,7 +357,7 @@ function Artist() {
 								<option value='all'>All Stores</option>
 								{getUniqueStores().map((store, index) => (
 									<option key={index} value={store}>
-										{store.substring(0, 8)}...
+										{truncateString(store, 8)}
 									</option>
 								))}
 							</select>
@@ -446,7 +454,8 @@ function Artist() {
 											filteredAndSortedArtists.map((artist) => (
 												<tr key={artist.ID} className='table-row'>
 													<td className='table-cell name'>
-														{artist.FullName || `Artist ${artist.ID.substring(0, 8)}...`}
+														{artist.FullName ||
+															(artist.ID ? truncateString(artist.ID, 8) : 'Unknown')}
 													</td>
 													<td className='table-cell'>{artist.PhoneNumber || 'N/A'}</td>
 													<td className='table-cell'>{artist.YearsOfExperience} years</td>
@@ -466,7 +475,7 @@ function Artist() {
 															{artist.AverageRating || 'Not rated'}
 														</span>
 													</td>
-													<td className='table-cell'>{artist.StoreId.substring(0, 8)}...</td>
+													<td className='table-cell'>{truncateString(artist.StoreId)}</td>
 													<td className='table-cell actions'>
 														<button
 															className='edit-btn'
@@ -534,7 +543,8 @@ function Artist() {
 							<div className='artist-info-box'>
 								<p>
 									<strong>Name:</strong>{' '}
-									{artistToDelete.FullName || `Artist ${artistToDelete.ID.substring(0, 8)}...`}
+									{artistToDelete.FullName ||
+										(artistToDelete.ID ? truncateString(artistToDelete.ID, 8) : 'Unknown')}
 								</p>
 								<p>
 									<strong>Experience:</strong> {artistToDelete.YearsOfExperience} years

@@ -100,11 +100,14 @@ function Store() {
 	const [showSidebar, setShowSidebar] = useState(false);
 	const [services, setServices] = useState([]);
 	const [nailDesigns, setNailDesigns] = useState([]);
+	const [categories, setCategories] = useState([]);
 	const [activeTab, setActiveTab] = useState('services');
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [designsLoading, setDesignsLoading] = useState(false);
 	const [designsError, setDesignsError] = useState(null);
+	const [categoriesLoading, setCategoriesLoading] = useState(false);
+	const [categoriesError, setCategoriesError] = useState(null);
 	const [editing, setEditing] = useState(false);
 	const [currentEdit, setCurrentEdit] = useState(null);
 	const [serviceEditing, setServiceEditing] = useState(false);
@@ -125,11 +128,32 @@ function Store() {
 
 	const navigate = useNavigate();
 
-	// Fetch services and designs from API when component mounts
+	// Fetch services, designs, and categories from API when component mounts
 	useEffect(() => {
 		fetchServices();
 		fetchDesigns();
+		fetchCategories();
 	}, []);
+
+	// Fetch categories from API
+	const fetchCategories = async () => {
+		setCategoriesLoading(true);
+		setCategoriesError(null);
+		try {
+			const response = await fetch(
+				'https://inbsapi-d9hhfmhsapgabrcz.southeastasia-01.azurewebsites.net/api/Adjective/Categories'
+			);
+
+			const data = await response.json();
+			console.log('Fetched categories:', data);
+			setCategories(data);
+		} catch (err) {
+			setCategoriesError(err.message);
+			console.error('Error fetching categories:', err);
+		} finally {
+			setCategoriesLoading(false);
+		}
+	};
 
 	// Fetch services from API
 	const fetchServices = async () => {
@@ -139,9 +163,7 @@ function Store() {
 			const response = await fetch(
 				'https://inbsapi-d9hhfmhsapgabrcz.southeastasia-01.azurewebsites.net/odata/Service'
 			);
-			if (!response.ok) {
-				throw new Error(`Error: ${response.status}`);
-			}
+
 			const data = await response.json();
 
 			// Transform API data to match the format we're using in the component
@@ -179,9 +201,7 @@ function Store() {
 			const response = await fetch(
 				'https://inbsapi-d9hhfmhsapgabrcz.southeastasia-01.azurewebsites.net/odata/Design'
 			);
-			if (!response.ok) {
-				throw new Error(`Error: ${response.status}`);
-			}
+
 			const data = await response.json();
 			console.log('Fetched designs data:', data); // Debug log to see structure
 
@@ -256,11 +276,14 @@ function Store() {
 			// Average Duration (in minutes)
 			formData.append('AverageDuration', parseInt(serviceData.duration) || 0);
 
-			// Category IDs - for now we'll leave empty or could map from our category dropdown
+			// Category IDs - handle from our category dropdown
 			if (serviceData.categoryIds && serviceData.categoryIds.length > 0) {
 				serviceData.categoryIds.forEach((id, index) => {
 					formData.append(`CategoryIds[${index}]`, id);
 				});
+			} else if (serviceData.category) {
+				// If no direct categoryIds but a category is selected, parse it
+				formData.append(`CategoryIds[0]`, serviceData.category);
 			}
 
 			// Designs - include if available
@@ -288,11 +311,6 @@ function Store() {
 				}
 			);
 
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(`Error: ${response.status} - ${errorText}`);
-			}
-
 			// Get the response for debugging
 			const responseData = await response.json();
 			console.log('Add service response:', responseData);
@@ -300,7 +318,6 @@ function Store() {
 			// Refresh services after adding
 			await fetchServices();
 		} catch (err) {
-			setError(err.message);
 			console.error('Error adding service:', err);
 		} finally {
 			setLoading(false);
@@ -338,25 +355,14 @@ function Store() {
 			// Average Duration (in minutes)
 			formData.append('AverageDuration', parseInt(serviceData.duration) || 0);
 
-			// Based on the screenshot, handle CategoryIds
-			if (serviceData.category === 'basic') {
-				formData.append('CategoryIds[0]', '1');
-			} else if (serviceData.category === 'gel') {
-				formData.append('CategoryIds[0]', '2');
-			} else if (serviceData.category === 'acrylic') {
-				formData.append('CategoryIds[0]', '3');
-			} else if (serviceData.category === 'care') {
-				formData.append('CategoryIds[0]', '4');
-			}
-
-			// If we have specific category IDs, use those instead
+			// Category IDs - use directly if available
 			if (serviceData.categoryIds && serviceData.categoryIds.length > 0) {
-				// Clear previous assignment
-				formData.delete('CategoryIds[0]');
-
 				serviceData.categoryIds.forEach((id, index) => {
 					formData.append(`CategoryIds[${index}]`, id);
 				});
+			} else if (serviceData.category) {
+				// If no direct categoryIds but a category is selected, use that
+				formData.append(`CategoryIds[0]`, serviceData.category);
 			}
 
 			// Designs - only include if there are any to avoid transaction issues
@@ -387,16 +393,6 @@ function Store() {
 			});
 
 			console.log('Response status:', response.status);
-
-			if (!response.ok) {
-				let errorText;
-				try {
-					errorText = await response.text();
-				} catch (e) {
-					errorText = 'Could not get error text: ' + e.message;
-				}
-				throw new Error(`Error: ${response.status} - ${errorText}`);
-			}
 
 			// Get the response for debugging
 			let responseData;
@@ -436,10 +432,6 @@ function Store() {
 					method: 'DELETE',
 				}
 			);
-
-			if (!response.ok) {
-				throw new Error(`Error: ${response.status}`);
-			}
 
 			// Remove from local state
 			setServices(services.filter((item) => item.id !== id));
@@ -490,11 +482,6 @@ function Store() {
 					body: formData,
 				}
 			);
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(`Error: ${response.status} - ${errorText}`);
-			}
 
 			// Get the response for debugging
 			const responseData = await response.json();
@@ -558,11 +545,6 @@ function Store() {
 				body: formData,
 			});
 
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(`Error: ${response.status} - ${errorText}`);
-			}
-
 			// Get the response for debugging
 			const responseData = await response.json();
 			console.log('Update response:', responseData);
@@ -592,11 +574,6 @@ function Store() {
 					method: 'DELETE',
 				}
 			);
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				throw new Error(`Error: ${response.status} - ${errorText}`);
-			}
 
 			// Remove from local state
 			setNailDesigns(nailDesigns.filter((item) => item.id !== id));
@@ -706,6 +683,13 @@ function Store() {
 		if (!serviceId) return 'No Service';
 		const service = services.find((s) => s.id === serviceId);
 		return service ? service.name : 'Unknown Service';
+	};
+
+	// Find category name by ID
+	const getCategoryNameById = (categoryId) => {
+		if (!categoryId) return 'N/A';
+		const category = categories.find((c) => c.id.toString() === categoryId.toString());
+		return category ? category.name : `Category ${categoryId}`;
 	};
 
 	const handleLogout = () => navigate('/');
@@ -835,18 +819,30 @@ function Store() {
 								>
 									<option value=''>Select category</option>
 									{activeTab === 'services' ? (
-										<>
-											<option value='basic'>Basic Nail</option>
-											<option value='gel'>Gel Nail</option>
-											<option value='acrylic'>Acrylic Nail</option>
-											<option value='care'>Nail Care</option>
-										</>
+										categoriesLoading ? (
+											<option disabled>Loading categories...</option>
+										) : categoriesError ? (
+											<option disabled>Error loading categories</option>
+										) : (
+											categories.map((category) => (
+												<option key={category.id} value={category.id}>
+													{category.name}
+												</option>
+											))
+										)
 									) : (
 										<>
-											<option value='simple'>Simple</option>
-											<option value='medium'>Medium</option>
-											<option value='complex'>Complex</option>
-											<option value='art'>Art</option>
+											{categoriesLoading ? (
+												<option disabled>Loading categories...</option>
+											) : categoriesError ? (
+												<option disabled>Error loading categories</option>
+											) : (
+												categories.map((category) => (
+													<option key={category.id} value={category.id}>
+														{category.name}
+													</option>
+												))
+											)}
 										</>
 									)}
 								</select>
@@ -1009,7 +1005,9 @@ function Store() {
 										<td className='product-table-cell'>{item.price || 0}</td>
 										{activeTab === 'services' ? (
 											<>
-												<td className='product-table-cell'>{item.category}</td>
+												<td className='product-table-cell'>
+													{getCategoryNameById(item.category)}
+												</td>
 												<td className='product-table-cell'>{item.duration}</td>
 											</>
 										) : (
