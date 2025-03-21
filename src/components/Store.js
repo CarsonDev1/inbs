@@ -447,6 +447,7 @@ function Store() {
 	};
 
 	// Add design to API
+	// Add design to API
 	const addDesign = async (designData) => {
 		setDesignsLoading(true);
 		setDesignsError(null);
@@ -558,14 +559,38 @@ function Store() {
 				}
 			);
 
-			// Check if the response is ok
+			// First check if the response is ok
 			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to add design');
+				// Get the response text (could be HTML, plain text, or JSON)
+				const responseText = await response.text();
+
+				// Try to parse as JSON, but if it fails, use the text as the error message
+				let errorMessage;
+				try {
+					const errorData = JSON.parse(responseText);
+					errorMessage = errorData.message || errorData.error || 'Failed to add design';
+				} catch (e) {
+					// If we can't parse as JSON, use the text directly (limited to avoid huge error messages)
+					errorMessage = responseText.substring(0, 100) + (responseText.length > 100 ? '...' : '');
+				}
+
+				throw new Error(errorMessage);
 			}
 
-			// Get the response for debugging
-			const responseData = await response.json();
+			// Get the response - handle both JSON and non-JSON responses
+			let responseData;
+			try {
+				const responseText = await response.text();
+				if (responseText.trim()) {
+					responseData = JSON.parse(responseText);
+				} else {
+					responseData = { success: true };
+				}
+			} catch (e) {
+				console.log('Response is not JSON, but request was successful');
+				responseData = { success: true };
+			}
+
 			console.log('Add design response:', responseData);
 
 			// Refresh designs after adding
