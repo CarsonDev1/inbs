@@ -32,18 +32,39 @@ function Home() {
 	const [editStoreId, setEditStoreId] = useState(null);
 	const navigate = useNavigate();
 
-	useEffect(() => {
-		fetchBookings();
-		fetchStores();
-	}, []);
-
+	// Modified fetchBookings function to properly handle the response data
 	const fetchBookings = async () => {
 		try {
-			const response = await fetch('https://6772b9a7ee76b92dd49333cb.mockapi.io/Booking');
+			const response = await fetch(
+				'https://inbsapi-d9hhfmhsapgabrcz.southeastasia-01.azurewebsites.net/odata/booking?$filter=status eq 0 &$select=id,serviceDate,startTime,predictEndTime,totalAmount,status,lastModifiedAt,customerSelectedId,artistStoreId'
+			);
+
+			if (!response.ok) {
+				throw new Error(`API request failed with status ${response.status}`);
+			}
+
 			const data = await response.json();
-			// Ensure data is an array before setting state
-			if (Array.isArray(data)) {
-				setBookings(data);
+			console.log('Fetched bookings data:', data); // For debugging
+
+			// Ensure data.value is an array before setting state
+			if (Array.isArray(data.value)) {
+				// Process the data to match the expected format
+				const processedBookings = data.value.map((booking) => ({
+					// Use the API response field names
+					ID: booking.ID,
+					ServiceDate: booking.ServiceDate,
+					StartTime: booking.StartTime,
+					PredictEndTime: booking.PredictEndTime,
+					TotalAmount: booking.TotalAmount,
+					Status: booking.Status,
+					LastModifiedAt: booking.LastModifiedAt,
+					CustomerSelectedId: booking.CustomerSelectedId,
+					ArtistStoreId: booking.ArtistStoreId,
+					// Handle nested objects
+					ArtistStore: booking.ArtistStore,
+				}));
+
+				setBookings(processedBookings);
 			} else {
 				setBookings([]); // Set empty array if data is not an array
 				console.error('Fetched data is not an array:', data);
@@ -53,6 +74,11 @@ function Home() {
 			setBookings([]); // Set empty array on error
 		}
 	};
+
+	useEffect(() => {
+		fetchBookings();
+		fetchStores();
+	}, []);
 
 	// Fetch store data from API
 	const fetchStores = async () => {
@@ -1824,255 +1850,214 @@ function Home() {
 						>
 							Appointment List
 						</h2>
-						<table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 15px' }}>
-							<thead>
-								<tr style={{ background: 'rgba(248,249,250,0.9)' }}>
-									<th
-										onClick={() => requestSort('name')}
-										style={{
-											padding: '20px',
-											color: '#1e3c72',
-											fontWeight: '800',
-											borderBottom: '2px solid #e9ecef',
-											fontSize: '16px',
-											cursor: 'pointer',
-											transition: 'all 0.3s ease',
-										}}
-										onMouseOver={(e) => {
-											e.currentTarget.style.color = '#24BFDD';
-										}}
-										onMouseOut={(e) => {
-											e.currentTarget.style.color = '#1e3c72';
-										}}
-									>
-										Customer Name{' '}
-										{sortConfig.key === 'name' &&
-											(sortConfig.direction === 'ascending' ? '↑' : '↓')}
-									</th>
-									<th
-										style={{
-											padding: '20px',
-											color: '#1e3c72',
-											fontWeight: '800',
-											borderBottom: '2px solid #e9ecef',
-											fontSize: '16px',
-										}}
-									>
-										Phone Number
-									</th>
-									<th
-										onClick={() => requestSort('date')}
-										style={{
-											padding: '20px',
-											color: '#1e3c72',
-											fontWeight: '800',
-											borderBottom: '2px solid #e9ecef',
-											fontSize: '16px',
-											cursor: 'pointer',
-											transition: 'all 0.3s ease',
-										}}
-										onMouseOver={(e) => {
-											e.currentTarget.style.color = '#24BFDD';
-										}}
-										onMouseOut={(e) => {
-											e.currentTarget.style.color = '#1e3c72';
-										}}
-									>
-										Date{' '}
-										{sortConfig.key === 'date' &&
-											(sortConfig.direction === 'ascending' ? '↑' : '↓')}
-									</th>
-									<th
-										style={{
-											padding: '20px',
-											color: '#1e3c72',
-											fontWeight: '800',
-											borderBottom: '2px solid #e9ecef',
-											fontSize: '16px',
-										}}
-									>
-										Time
-									</th>
-									<th
-										style={{
-											padding: '20px',
-											color: '#1e3c72',
-											fontWeight: '800',
-											borderBottom: '2px solid #e9ecef',
-											fontSize: '16px',
-										}}
-									>
-										Service
-									</th>
-									<th
-										onClick={() => requestSort('price')}
-										style={{
-											padding: '20px',
-											color: '#1e3c72',
-											fontWeight: '800',
-											borderBottom: '2px solid #e9ecef',
-											fontSize: '16px',
-											cursor: 'pointer',
-											transition: 'all 0.3s ease',
-										}}
-										onMouseOver={(e) => {
-											e.currentTarget.style.color = '#24BFDD';
-										}}
-										onMouseOut={(e) => {
-											e.currentTarget.style.color = '#1e3c72';
-										}}
-									>
-										Price{' '}
-										{sortConfig.key === 'price' &&
-											(sortConfig.direction === 'ascending' ? '↑' : '↓')}
-									</th>
-									<th
-										style={{
-											padding: '20px',
-											color: '#1e3c72',
-											fontWeight: '800',
-											borderBottom: '2px solid #e9ecef',
-											fontSize: '16px',
-										}}
-									>
-										Store Address
-									</th>
-									<th
-										style={{
-											padding: '20px',
-											color: '#1e3c72',
-											fontWeight: '800',
-											borderBottom: '2px solid #e9ecef',
-											fontSize: '16px',
-										}}
-									>
-										Service Image
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								{filteredAndSortedBookings.map((booking, index) => (
-									<tr
-										key={index}
-										style={{
-											background: 'white',
-											transition: 'all 0.4s ease',
-											borderRadius: '18px',
-											boxShadow: '0 5px 18px rgba(0,0,0,0.04)',
-											cursor: 'pointer',
-										}}
-										onMouseOver={(e) => {
-											e.currentTarget.style.transform = 'translateY(-4px)';
-											e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.12)';
-										}}
-										onMouseOut={(e) => {
-											e.currentTarget.style.transform = 'translateY(0)';
-											e.currentTarget.style.boxShadow = '0 5px 18px rgba(0,0,0,0.04)';
-										}}
-									>
-										<td
+
+						{bookings.length === 0 ? (
+							<div
+								style={{
+									display: 'flex',
+									justifyContent: 'center',
+									padding: '40px 0',
+									color: '#666',
+									fontSize: '18px',
+								}}
+							>
+								{searchTerm ? 'No appointments match your search' : 'Loading appointment data...'}
+							</div>
+						) : (
+							<table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 15px' }}>
+								<thead>
+									<tr style={{ background: 'rgba(248,249,250,0.9)' }}>
+										<th
+											onClick={() => requestSort('serviceDate')}
 											style={{
-												padding: '25px',
-												borderBottom: '1px solid #e9ecef',
-												fontWeight: '600',
+												padding: '20px',
 												color: '#1e3c72',
+												fontWeight: '800',
+												borderBottom: '2px solid #e9ecef',
+												fontSize: '16px',
+												cursor: 'pointer',
+												transition: 'all 0.3s ease',
+											}}
+											onMouseOver={(e) => {
+												e.currentTarget.style.color = '#24BFDD';
+											}}
+											onMouseOut={(e) => {
+												e.currentTarget.style.color = '#1e3c72';
 											}}
 										>
-											{booking.name}
-										</td>
-										<td
+											Date{' '}
+											{sortConfig.key === 'serviceDate' &&
+												(sortConfig.direction === 'ascending' ? '↑' : '↓')}
+										</th>
+										<th
 											style={{
-												padding: '25px',
-												borderBottom: '1px solid #e9ecef',
-												color: '#666',
-												fontWeight: '500',
-											}}
-										>
-											{booking.phone}
-										</td>
-										<td
-											style={{
-												padding: '25px',
-												borderBottom: '1px solid #e9ecef',
-												color: '#666',
-												fontWeight: '500',
-											}}
-										>
-											{booking.date}
-										</td>
-										<td
-											style={{
-												padding: '25px',
-												borderBottom: '1px solid #e9ecef',
-												color: '#666',
-												fontWeight: '500',
-											}}
-										>
-											{booking.time} hours
-										</td>
-										<td
-											style={{
-												padding: '25px',
-												borderBottom: '1px solid #e9ecef',
-												fontWeight: '600',
+												padding: '20px',
 												color: '#1e3c72',
+												fontWeight: '800',
+												borderBottom: '2px solid #e9ecef',
+												fontSize: '16px',
 											}}
 										>
-											{booking.service}
-										</td>
-										<td
+											Start Time
+										</th>
+										<th
 											style={{
-												padding: '25px',
-												borderBottom: '1px solid #e9ecef',
-												fontWeight: '700',
-												color: '#24BFDD',
+												padding: '20px',
+												color: '#1e3c72',
+												fontWeight: '800',
+												borderBottom: '2px solid #e9ecef',
+												fontSize: '16px',
 											}}
 										>
-											${booking.price}
-										</td>
-										<td
+											End Time
+										</th>
+										<th
+											onClick={() => requestSort('totalAmount')}
 											style={{
-												padding: '25px',
-												borderBottom: '1px solid #e9ecef',
-												fontWeight: '600',
-												color: '#24BFDD',
+												padding: '20px',
+												color: '#1e3c72',
+												fontWeight: '800',
+												borderBottom: '2px solid #e9ecef',
+												fontSize: '16px',
+												cursor: 'pointer',
+												transition: 'all 0.3s ease',
+											}}
+											onMouseOver={(e) => {
+												e.currentTarget.style.color = '#24BFDD';
+											}}
+											onMouseOut={(e) => {
+												e.currentTarget.style.color = '#1e3c72';
 											}}
 										>
-											{booking.store}
-										</td>
-										<td style={{ padding: '25px', borderBottom: '1px solid #e9ecef' }}>
-											{booking.serviceImage && (
-												<div>
-													<img
-														src={booking.serviceImage}
-														alt={booking.service}
-														onClick={() => setSelectedImage(booking)}
-														style={{
-															width: '130px',
-															height: '130px',
-															objectFit: 'cover',
-															borderRadius: '18px',
-															boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
-															transition: 'all 0.4s ease',
-															border: '3px solid rgba(255,255,255,0.3)',
-															cursor: 'pointer',
-														}}
-														onMouseOver={(e) => {
-															e.target.style.transform = 'scale(1.1)';
-															e.target.style.boxShadow = '0 15px 35px rgba(0,0,0,0.18)';
-														}}
-														onMouseOut={(e) => {
-															e.target.style.transform = 'scale(1)';
-															e.target.style.boxShadow = '0 10px 25px rgba(0,0,0,0.12)';
-														}}
-													/>
-												</div>
-											)}
-										</td>
+											Amount{' '}
+											{sortConfig.key === 'totalAmount' &&
+												(sortConfig.direction === 'ascending' ? '↑' : '↓')}
+										</th>
+										<th
+											style={{
+												padding: '20px',
+												color: '#1e3c72',
+												fontWeight: '800',
+												borderBottom: '2px solid #e9ecef',
+												fontSize: '16px',
+											}}
+										>
+											Status
+										</th>
+										<th
+											style={{
+												padding: '20px',
+												color: '#1e3c72',
+												fontWeight: '800',
+												borderBottom: '2px solid #e9ecef',
+												fontSize: '16px',
+											}}
+										>
+											Store Address
+										</th>
 									</tr>
-								))}
-							</tbody>
-						</table>
+								</thead>
+								<tbody>
+									{bookings.map((booking) => (
+										<tr
+											key={booking.ID}
+											style={{
+												background: 'white',
+												transition: 'all 0.4s ease',
+												borderRadius: '18px',
+												boxShadow: '0 5px 18px rgba(0,0,0,0.04)',
+												cursor: 'pointer',
+											}}
+											onMouseOver={(e) => {
+												e.currentTarget.style.transform = 'translateY(-4px)';
+												e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.12)';
+											}}
+											onMouseOut={(e) => {
+												e.currentTarget.style.transform = 'translateY(0)';
+												e.currentTarget.style.boxShadow = '0 5px 18px rgba(0,0,0,0.04)';
+											}}
+										>
+											<td
+												style={{
+													padding: '25px',
+													borderBottom: '1px solid #e9ecef',
+													color: '#666',
+													fontWeight: '500',
+												}}
+											>
+												{formatDate(booking.ServiceDate)}
+											</td>
+											<td
+												style={{
+													padding: '25px',
+													borderBottom: '1px solid #e9ecef',
+													color: '#666',
+													fontWeight: '500',
+												}}
+											>
+												{booking.StartTime ? booking.StartTime.substring(0, 5) : 'N/A'}
+											</td>
+											<td
+												style={{
+													padding: '25px',
+													borderBottom: '1px solid #e9ecef',
+													color: '#666',
+													fontWeight: '500',
+												}}
+											>
+												{booking.PredictEndTime
+													? booking.PredictEndTime.substring(0, 5)
+													: 'N/A'}
+											</td>
+											<td
+												style={{
+													padding: '25px',
+													borderBottom: '1px solid #e9ecef',
+													fontWeight: '700',
+													color: '#24BFDD',
+												}}
+											>
+												{booking.TotalAmount.toLocaleString()} VND
+											</td>
+											<td
+												style={{
+													padding: '25px',
+													borderBottom: '1px solid #e9ecef',
+													fontWeight: '600',
+												}}
+											>
+												<span
+													style={{
+														padding: '6px 12px',
+														borderRadius: '20px',
+														background:
+															booking.Status === 1
+																? 'rgba(75, 192, 192, 0.2)'
+																: 'rgba(255, 99, 132, 0.2)',
+														color: booking.Status === 1 ? '#2a9d8f' : '#e63946',
+														fontWeight: '600',
+													}}
+												>
+													{booking.Status === 1 ? 'Active' : 'Inactive'}
+												</span>
+											</td>
+											<td
+												style={{
+													padding: '25px',
+													borderBottom: '1px solid #e9ecef',
+													fontWeight: '600',
+													color: '#24BFDD',
+												}}
+											>
+												{booking.ArtistStore && booking.ArtistStore.Store
+													? booking.ArtistStore.Store.Address
+													: 'N/A'}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						)}
 					</div>
 				</div>
 			</div>

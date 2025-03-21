@@ -161,7 +161,7 @@ function Store() {
 		setError(null);
 		try {
 			const response = await fetch(
-				'https://inbsapi-d9hhfmhsapgabrcz.southeastasia-01.azurewebsites.net/odata/Service'
+				'https://inbsapi-d9hhfmhsapgabrcz.southeastasia-01.azurewebsites.net/odata/Service?$select=Id,Name,AverageDuration,Price,Description,ImageUrl&$expand=CategoryServices'
 			);
 
 			const data = await response.json();
@@ -174,7 +174,10 @@ function Store() {
 				price: item.Price,
 				// For now, we'll use "N/A" for category since it's not clear from the response
 				// how CategoryServices is structured in the OData format
-				category: 'N/A',
+				category:
+					item.CategoryServices && item.CategoryServices.length > 0
+						? item.CategoryServices[0].CategoryId
+						: null,
 				duration: item.AverageDuration,
 				description: item.Description,
 				imageUrl: item.ImageUrl || '',
@@ -199,7 +202,7 @@ function Store() {
 		try {
 			// Use expanded query to include service details
 			const response = await fetch(
-				'https://inbsapi-d9hhfmhsapgabrcz.southeastasia-01.azurewebsites.net/odata/Design'
+				'https://inbsapi-d9hhfmhsapgabrcz.southeastasia-01.azurewebsites.net/odata/design?$select=id,name,description,trendscore&$expand=medias($select=numerialOrder,imageUrl,mediatype),preferences,nailDesigns($select=id,imageUrl,nailposition,isleft;$expand=nailDesignServices($select=id,serviceId;$expand=service($select=id,name,imageUrl,price,isAdditional,averageDuration)))'
 			);
 
 			const data = await response.json();
@@ -453,22 +456,94 @@ function Store() {
 			// Create form data for multipart/form-data request
 			const formData = new FormData();
 
-			// Add basic fields
-			formData.append('Name', designData.name);
-			formData.append('Description', designData.description);
-			formData.append('Price', parseFloat(designData.price) || 0);
-			formData.append('TrendScore', parseInt(designData.trendScore) || 0);
+			// Add basic fields from user input
+			formData.append('Name', designData.name || '');
+			formData.append('Description', designData.description || '');
+			formData.append('TrendScore', parseFloat(designData.trendScore) || 0);
 
-			// Add service association if a service is selected
-			if (designData.serviceId) {
-				// Try both formats to ensure compatibility with the API
+			// Handle ColorIds from user input
+			if (designData.colorIds && designData.colorIds.length > 0) {
+				designData.colorIds.forEach((id, index) => {
+					formData.append(`ColorIds[${index}]`, id);
+				});
+			}
+
+			// Handle OccasionIds from user input
+			if (designData.occasionIds && designData.occasionIds.length > 0) {
+				designData.occasionIds.forEach((id, index) => {
+					formData.append(`OccasionIds[${index}]`, id);
+				});
+			}
+
+			// Handle SkintoneIds from user input
+			if (designData.skintoneIds && designData.skintoneIds.length > 0) {
+				designData.skintoneIds.forEach((id, index) => {
+					formData.append(`SkintoneIds[${index}]`, id);
+				});
+			}
+
+			// Handle PaintTypeIds from user input
+			if (designData.paintTypeIds && designData.paintTypeIds.length > 0) {
+				designData.paintTypeIds.forEach((id, index) => {
+					formData.append(`PaintTypeIds[${index}]`, id);
+				});
+			}
+
+			// Handle file uploads (media) if provided by user
+			if (designData.mediaFiles && designData.mediaFiles.length > 0) {
+				designData.mediaFiles.forEach((file, index) => {
+					formData.append(`MediaFiles[${index}]`, file);
+				});
+			}
+
+			// Handle nail designs association from user input
+			if (designData.nailDesignIds && designData.nailDesignIds.length > 0) {
+				designData.nailDesignIds.forEach((id, index) => {
+					formData.append(`NailDesignIds[${index}]`, id);
+				});
+			}
+
+			// Handle service associations from user input
+			if (designData.services && designData.services.length > 0) {
+				designData.services.forEach((service, index) => {
+					formData.append(`Services[${index}].ServiceID`, service.serviceId);
+					formData.append(`Services[${index}].ExtraPrice`, parseFloat(service.extraPrice) || 0);
+				});
+			} else if (designData.serviceId) {
+				// Backward compatibility for single service selection
 				formData.append('Services[0].ServiceID', designData.serviceId);
 				formData.append('Services[0].ExtraPrice', parseFloat(designData.extraPrice) || 0);
-
-				// Log what we're sending to the API
-				console.log('Including service with ID:', designData.serviceId);
-				console.log('and extra price:', designData.extraPrice);
 			}
+
+			// Handle any other custom fields that might be added by the user
+			Object.keys(designData).forEach((key) => {
+				// Skip already processed fields
+				const processedFields = [
+					'name',
+					'description',
+					'trendScore',
+					'colorIds',
+					'occasionIds',
+					'skintoneIds',
+					'paintTypeIds',
+					'mediaFiles',
+					'nailDesignIds',
+					'services',
+					'serviceId',
+					'extraPrice',
+				];
+
+				if (!processedFields.includes(key) && designData[key] !== undefined && designData[key] !== null) {
+					// Handle arrays
+					if (Array.isArray(designData[key])) {
+						designData[key].forEach((value, index) => {
+							formData.append(`${key}[${index}]`, value);
+						});
+					} else {
+						formData.append(key, designData[key]);
+					}
+				}
+			});
 
 			// Log the form data for debugging
 			for (let pair of formData.entries()) {
@@ -483,20 +558,33 @@ function Store() {
 				}
 			);
 
+			// Check if the response is ok
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to add design');
+			}
+
 			// Get the response for debugging
 			const responseData = await response.json();
-			console.log('Add response:', responseData);
+			console.log('Add design response:', responseData);
 
 			// Refresh designs after adding
 			await fetchDesigns();
+
+			// Show success message
+			alert('Design added successfully!');
+			return responseData; // Return the response data for potential further use
 		} catch (err) {
 			setDesignsError(err.message);
 			console.error('Error adding design:', err);
+			alert('Error adding design: ' + err.message);
+			throw err; // Re-throw to allow handling by caller
 		} finally {
 			setDesignsLoading(false);
 		}
 	};
 
+	// Update design in API
 	// Update design in API
 	const updateDesign = async (designData) => {
 		setDesignsLoading(true);
@@ -513,26 +601,14 @@ function Store() {
 			// Add basic fields
 			formData.append('ID', designData.id);
 			formData.append('Name', designData.name);
-			formData.append('Description', designData.description);
-			formData.append('Price', parseFloat(designData.price) || 0);
+			formData.append('Description', designData.description || '');
 			formData.append('TrendScore', parseInt(designData.trendScore) || 0);
 
 			// Always include Services array, even if empty
 			// Add service association if a service is selected
 			if (designData.serviceId) {
-				// Try both formats to ensure compatibility with the API
 				formData.append('Services[0].ServiceID', designData.serviceId);
 				formData.append('Services[0].ExtraPrice', parseFloat(designData.extraPrice) || 0);
-
-				// Alternative format that might be expected by the API
-				formData.append('Services[0].DesignID', designData.id);
-
-				// Log what we're sending to the API
-				console.log('Including service with ID:', designData.serviceId);
-				console.log('and extra price:', designData.extraPrice);
-			} else {
-				// If no service is selected, explicitly set an empty array
-				formData.append('Services', JSON.stringify([]));
 			}
 
 			// Log the form data for debugging
@@ -545,9 +621,26 @@ function Store() {
 				body: formData,
 			});
 
-			// Get the response for debugging
-			const responseData = await response.json();
-			console.log('Update response:', responseData);
+			// Check if the response is successful
+			if (!response.ok) {
+				throw new Error(`Server responded with status: ${response.status}`);
+			}
+
+			// Try to parse the response data if there is any
+			let responseData;
+			const responseText = await response.text();
+			console.log('Raw response:', responseText);
+
+			if (responseText && responseText.trim() !== '') {
+				try {
+					responseData = JSON.parse(responseText);
+					console.log('Update response:', responseData);
+				} catch (parseErr) {
+					console.log('Response is not valid JSON, but request was successful');
+				}
+			} else {
+				console.log('Response is empty, but request was successful');
+			}
 
 			// Refresh designs after updating
 			await fetchDesigns();
@@ -555,9 +648,13 @@ function Store() {
 			// Reset editing state
 			setEditing(false);
 			setCurrentEdit(null);
+
+			// Show success notification
+			alert('Design updated successfully!');
 		} catch (err) {
 			setDesignsError(err.message);
 			console.error('Error updating design:', err);
+			alert('Error updating design: ' + err.message);
 		} finally {
 			setDesignsLoading(false);
 		}
