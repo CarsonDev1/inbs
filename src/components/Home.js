@@ -32,6 +32,31 @@ function Home() {
 	const [editStoreId, setEditStoreId] = useState(null);
 	const navigate = useNavigate();
 
+	const bookingStatus = {
+		CANCELED: -1,
+		WAITING: 0,
+		CONFIRMED: 1,
+		SERVING: 2,
+		COMPLETED: 3,
+	};
+
+	const getStatusInfo = (status) => {
+		switch (status) {
+			case bookingStatus.CANCELED:
+				return { label: 'Canceled', bgColor: 'rgba(255, 99, 132, 0.2)', textColor: '#e63946' };
+			case bookingStatus.WAITING:
+				return { label: 'Waiting', bgColor: 'rgba(255, 205, 86, 0.2)', textColor: '#ff9500' };
+			case bookingStatus.CONFIRMED:
+				return { label: 'Confirmed', bgColor: 'rgba(54, 162, 235, 0.2)', textColor: '#0077b6' };
+			case bookingStatus.SERVING:
+				return { label: 'Serving', bgColor: 'rgba(153, 102, 255, 0.2)', textColor: '#7209b7' };
+			case bookingStatus.COMPLETED:
+				return { label: 'Completed', bgColor: 'rgba(75, 192, 192, 0.2)', textColor: '#2a9d8f' };
+			default:
+				return { label: 'Unknown', bgColor: 'rgba(201, 203, 207, 0.2)', textColor: '#666666' };
+		}
+	};
+
 	// Modified fetchBookings function to properly handle the response data
 	const fetchBookings = async () => {
 		try {
@@ -1958,103 +1983,104 @@ function Home() {
 									</tr>
 								</thead>
 								<tbody>
-									{bookings.map((booking) => (
-										<tr
-											key={booking.ID}
-											style={{
-												background: 'white',
-												transition: 'all 0.4s ease',
-												borderRadius: '18px',
-												boxShadow: '0 5px 18px rgba(0,0,0,0.04)',
-												cursor: 'pointer',
-											}}
-											onMouseOver={(e) => {
-												e.currentTarget.style.transform = 'translateY(-4px)';
-												e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.12)';
-											}}
-											onMouseOut={(e) => {
-												e.currentTarget.style.transform = 'translateY(0)';
-												e.currentTarget.style.boxShadow = '0 5px 18px rgba(0,0,0,0.04)';
-											}}
-										>
-											<td
+									{bookings.map((booking) => {
+										const statusInfo = getStatusInfo(booking.Status);
+
+										return (
+											<tr
+												key={booking.ID}
 												style={{
-													padding: '25px',
-													borderBottom: '1px solid #e9ecef',
-													color: '#666',
-													fontWeight: '500',
+													background: 'white',
+													transition: 'all 0.4s ease',
+													borderRadius: '18px',
+													boxShadow: '0 5px 18px rgba(0,0,0,0.04)',
+													cursor: 'pointer',
+												}}
+												onMouseOver={(e) => {
+													e.currentTarget.style.transform = 'translateY(-4px)';
+													e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.12)';
+												}}
+												onMouseOut={(e) => {
+													e.currentTarget.style.transform = 'translateY(0)';
+													e.currentTarget.style.boxShadow = '0 5px 18px rgba(0,0,0,0.04)';
 												}}
 											>
-												{formatDate(booking.ServiceDate)}
-											</td>
-											<td
-												style={{
-													padding: '25px',
-													borderBottom: '1px solid #e9ecef',
-													color: '#666',
-													fontWeight: '500',
-												}}
-											>
-												{booking.StartTime ? booking.StartTime.substring(0, 5) : 'N/A'}
-											</td>
-											<td
-												style={{
-													padding: '25px',
-													borderBottom: '1px solid #e9ecef',
-													color: '#666',
-													fontWeight: '500',
-												}}
-											>
-												{booking.PredictEndTime
-													? booking.PredictEndTime.substring(0, 5)
-													: 'N/A'}
-											</td>
-											<td
-												style={{
-													padding: '25px',
-													borderBottom: '1px solid #e9ecef',
-													fontWeight: '700',
-													color: '#24BFDD',
-												}}
-											>
-												{booking.TotalAmount.toLocaleString()} VND
-											</td>
-											<td
-												style={{
-													padding: '25px',
-													borderBottom: '1px solid #e9ecef',
-													fontWeight: '600',
-												}}
-											>
-												<span
+												<td
 													style={{
-														padding: '6px 12px',
-														borderRadius: '20px',
-														background:
-															booking.Status === 1
-																? 'rgba(75, 192, 192, 0.2)'
-																: 'rgba(255, 99, 132, 0.2)',
-														color: booking.Status === 1 ? '#2a9d8f' : '#e63946',
+														padding: '25px',
+														borderBottom: '1px solid #e9ecef',
+														color: '#666',
+														fontWeight: '500',
+													}}
+												>
+													{formatDate(booking.ServiceDate)}
+												</td>
+												<td
+													style={{
+														padding: '25px',
+														borderBottom: '1px solid #e9ecef',
+														color: '#666',
+														fontWeight: '500',
+													}}
+												>
+													{booking.StartTime ? booking.StartTime.substring(0, 5) : 'N/A'}
+												</td>
+												<td
+													style={{
+														padding: '25px',
+														borderBottom: '1px solid #e9ecef',
+														color: '#666',
+														fontWeight: '500',
+													}}
+												>
+													{booking.PredictEndTime
+														? booking.PredictEndTime.substring(0, 5)
+														: 'N/A'}
+												</td>
+												<td
+													style={{
+														padding: '25px',
+														borderBottom: '1px solid #e9ecef',
+														fontWeight: '700',
+														color: '#24BFDD',
+													}}
+												>
+													{booking.TotalAmount.toLocaleString()} VND
+												</td>
+												<td
+													style={{
+														padding: '25px',
+														borderBottom: '1px solid #e9ecef',
 														fontWeight: '600',
 													}}
 												>
-													{booking.Status === 1 ? 'Active' : 'Inactive'}
-												</span>
-											</td>
-											<td
-												style={{
-													padding: '25px',
-													borderBottom: '1px solid #e9ecef',
-													fontWeight: '600',
-													color: '#24BFDD',
-												}}
-											>
-												{booking.ArtistStore && booking.ArtistStore.Store
-													? booking.ArtistStore.Store.Address
-													: 'N/A'}
-											</td>
-										</tr>
-									))}
+													<span
+														style={{
+															padding: '6px 12px',
+															borderRadius: '20px',
+															background: statusInfo.bgColor,
+															color: statusInfo.textColor,
+															fontWeight: '600',
+														}}
+													>
+														{statusInfo.label}
+													</span>
+												</td>
+												<td
+													style={{
+														padding: '25px',
+														borderBottom: '1px solid #e9ecef',
+														fontWeight: '600',
+														color: '#24BFDD',
+													}}
+												>
+													{booking.ArtistStore && booking.ArtistStore.Store
+														? booking.ArtistStore.Store.Address
+														: 'N/A'}
+												</td>
+											</tr>
+										);
+									})}
 								</tbody>
 							</table>
 						)}
