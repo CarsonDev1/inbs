@@ -122,6 +122,12 @@ function Store() {
 		isAdditional: false,
 		categoryIds: [],
 		trendScore: '0',
+		colorIds: [],
+		occasionIds: [],
+		skintoneIds: [],
+		paintTypeIds: [],
+		mediaFiles: [],
+		nailDesignIds: [],
 		serviceId: '',
 		extraPrice: '0',
 	});
@@ -447,7 +453,6 @@ function Store() {
 	};
 
 	// Add design to API
-	// Add design to API
 	const addDesign = async (designData) => {
 		setDesignsLoading(true);
 		setDesignsError(null);
@@ -559,38 +564,14 @@ function Store() {
 				}
 			);
 
-			// First check if the response is ok
+			// Check if the response is ok
 			if (!response.ok) {
-				// Get the response text (could be HTML, plain text, or JSON)
-				const responseText = await response.text();
-
-				// Try to parse as JSON, but if it fails, use the text as the error message
-				let errorMessage;
-				try {
-					const errorData = JSON.parse(responseText);
-					errorMessage = errorData.message || errorData.error || 'Failed to add design';
-				} catch (e) {
-					// If we can't parse as JSON, use the text directly (limited to avoid huge error messages)
-					errorMessage = responseText.substring(0, 100) + (responseText.length > 100 ? '...' : '');
-				}
-
-				throw new Error(errorMessage);
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to add design');
 			}
 
-			// Get the response - handle both JSON and non-JSON responses
-			let responseData;
-			try {
-				const responseText = await response.text();
-				if (responseText.trim()) {
-					responseData = JSON.parse(responseText);
-				} else {
-					responseData = { success: true };
-				}
-			} catch (e) {
-				console.log('Response is not JSON, but request was successful');
-				responseData = { success: true };
-			}
-
+			// Get the response for debugging
+			const responseData = await response.json();
 			console.log('Add design response:', responseData);
 
 			// Refresh designs after adding
@@ -761,30 +742,62 @@ function Store() {
 		// Set editing mode based on active tab
 		if (activeTab === 'services') {
 			setServiceEditing(true);
+			setCurrentEdit(item);
+
+			// Populate the form with service data (keep this as is)
+			setNewItem({
+				name: item.name,
+				price: item.price?.toString() || '0',
+				category: item.category || '',
+				duration: item.duration?.toString() || '0',
+				description: item.description || '',
+				imageUrl: item.imageUrl || '',
+				isAdditional: item.isAdditional || false,
+				categoryIds: item.categoryIds || [],
+				// Keep the rest of the fields empty
+				trendScore: '0',
+				colorIds: [],
+				occasionIds: [],
+				skintoneIds: [],
+				paintTypeIds: [],
+				mediaFiles: [],
+				nailDesignIds: [],
+				serviceId: '',
+				extraPrice: '0',
+				// Store the ID for updates
+				id: item.id,
+			});
 		} else {
+			// Set up for editing a design
 			setEditing(true);
+			setCurrentEdit(item);
+
+			// Populate form with design data
+			setNewItem({
+				name: item.name || '',
+				description: item.description || '',
+				trendScore: item.trendScore?.toString() || '0',
+				// Previous implementation may not have these arrays - initialize them properly
+				colorIds: item.colorIds || [],
+				occasionIds: item.occasionIds || [],
+				skintoneIds: item.skintoneIds || [],
+				paintTypeIds: item.paintTypeIds || [],
+				// Can't populate file inputs, so just initialize empty
+				mediaFiles: [],
+				nailDesignIds: item.nailDesignIds || [],
+				serviceId: item.serviceId || '',
+				extraPrice: item.extraPrice?.toString() || '0',
+				// Keep fields used for services tab to avoid undefined errors
+				price: '',
+				category: '',
+				duration: '',
+				imageUrl: '',
+				isAdditional: false,
+				categoryIds: [],
+				// Store the ID for updates
+				id: item.id,
+			});
 		}
-
-		setCurrentEdit(item);
-
-		// Populate form with item data
-		setNewItem({
-			name: item.name,
-			price: item.price?.toString() || '0',
-			category: item.category || '',
-			duration: item.duration?.toString() || '0',
-			description: item.description || '',
-			imageUrl: item.imageUrl || '',
-			isAdditional: item.isAdditional || false,
-			categoryIds: item.categoryIds || [],
-			trendScore: item.trendScore?.toString() || '0',
-			serviceId: item.serviceId || '',
-			extraPrice: item.extraPrice?.toString() || '0',
-			// Store any designs associated with this service
-			designs: item.designs || [],
-			// Store the ID for updates
-			id: item.id,
-		});
 
 		// Scroll to form
 		document.querySelector('.product-form').scrollIntoView({ behavior: 'smooth' });
@@ -902,58 +915,40 @@ function Store() {
 						<div className='error-message'>Error: {activeTab === 'services' ? error : designsError}</div>
 					)}
 
+					{/* Product Form Section - Just modify this part */}
 					<div className='product-form'>
-						<h2 className='section-title'>
-							{activeTab === 'services'
-								? serviceEditing
-									? 'Edit Service'
-									: 'Add New Service'
-								: editing
-								? 'Edit Nail Design'
-								: 'Add New Design'}
-						</h2>
-						<form onSubmit={handleSubmit}>
-							<div className='form-grid'>
-								<input
-									type='text'
-									name='name'
-									placeholder={activeTab === 'services' ? 'Service name' : 'Design name'}
-									value={newItem.name}
-									onChange={handleInputChange}
-									required
-									className='form-input'
-								/>
-								<input
-									type='number'
-									name='price'
-									placeholder='Price (VND)'
-									value={newItem.price}
-									onChange={handleInputChange}
-									required
-									className='form-input'
-								/>
-								<select
-									name='category'
-									value={newItem.category}
-									onChange={handleInputChange}
-									required={activeTab === 'services'}
-									className='form-input'
-								>
-									<option value=''>Select category</option>
-									{activeTab === 'services' ? (
-										categoriesLoading ? (
-											<option disabled>Loading categories...</option>
-										) : categoriesError ? (
-											<option disabled>Error loading categories</option>
-										) : (
-											categories.map((category) => (
-												<option key={category.id} value={category.id}>
-													{category.name}
-												</option>
-											))
-										)
-									) : (
-										<>
+						{activeTab === 'services' ? (
+							// Service Form - Keep this exactly as it was
+							<>
+								<h2 className='section-title'>{serviceEditing ? 'Edit Service' : 'Add New Service'}</h2>
+								<form onSubmit={handleSubmit}>
+									<div className='form-grid'>
+										<input
+											type='text'
+											name='name'
+											placeholder='Service name'
+											value={newItem.name}
+											onChange={handleInputChange}
+											required
+											className='form-input'
+										/>
+										<input
+											type='number'
+											name='price'
+											placeholder='Price (VND)'
+											value={newItem.price}
+											onChange={handleInputChange}
+											required
+											className='form-input'
+										/>
+										<select
+											name='category'
+											value={newItem.category}
+											onChange={handleInputChange}
+											required
+											className='form-input'
+										>
+											<option value=''>Select category</option>
 											{categoriesLoading ? (
 												<option disabled>Loading categories...</option>
 											) : categoriesError ? (
@@ -965,11 +960,7 @@ function Store() {
 													</option>
 												))
 											)}
-										</>
-									)}
-								</select>
-								{activeTab === 'services' ? (
-									<>
+										</select>
 										<input
 											type='number'
 											name='duration'
@@ -993,9 +984,69 @@ function Store() {
 												Is Additional Service
 											</label>
 										</div>
-									</>
-								) : (
-									<>
+										<input
+											type='text'
+											name='imageUrl'
+											placeholder='Image URL'
+											value={newItem.imageUrl}
+											onChange={handleInputChange}
+											className='form-input'
+										/>
+										<textarea
+											name='description'
+											placeholder='Description'
+											value={newItem.description}
+											onChange={handleInputChange}
+											required
+											className='form-input'
+										/>
+									</div>
+									<button type='submit' className='submit-button' disabled={loading}>
+										{loading ? 'Processing...' : serviceEditing ? 'Update' : 'Add New'}
+									</button>
+									{serviceEditing && (
+										<button
+											type='button'
+											className='cancel-button'
+											onClick={() => {
+												setServiceEditing(false);
+												setCurrentEdit(null);
+												setNewItem({
+													name: '',
+													price: '',
+													category: '',
+													duration: '',
+													description: '',
+													imageUrl: '',
+													isAdditional: false,
+													categoryIds: [],
+													trendScore: '0',
+													serviceId: '',
+													extraPrice: '0',
+												});
+											}}
+										>
+											Cancel
+										</button>
+									)}
+								</form>
+							</>
+						) : (
+							// Design Form - New implementation with all required fields
+							<>
+								<h2 className='section-title'>{editing ? 'Edit Nail Design' : 'Add New Design'}</h2>
+								<form onSubmit={handleSubmit}>
+									<div className='form-grid'>
+										{/* Basic Information */}
+										<input
+											type='text'
+											name='name'
+											placeholder='Design name'
+											value={newItem.name}
+											onChange={handleInputChange}
+											required
+											className='form-input'
+										/>
 										<input
 											type='number'
 											name='trendScore'
@@ -1006,12 +1057,21 @@ function Store() {
 											min='0'
 											max='10'
 										/>
-										<select
+										<textarea
+											name='description'
+											placeholder='Description'
+											value={newItem.description}
+											onChange={handleInputChange}
+											className='form-input'
+											style={{ gridColumn: 'span 2' }}
+										/>
+
+										{/* Service Association */}
+										{/* <select
 											name='serviceId'
 											value={newItem.serviceId}
 											onChange={handleInputChange}
 											className='form-input'
-											required
 										>
 											<option value=''>Select a service</option>
 											{services.map((service) => (
@@ -1028,64 +1088,180 @@ function Store() {
 											onChange={handleInputChange}
 											className='form-input'
 											min='0'
-										/>
-									</>
-								)}
-								<input
-									type='text'
-									name='imageUrl'
-									placeholder='Image URL'
-									value={newItem.imageUrl}
-									onChange={handleInputChange}
-									className='form-input'
-								/>
-								<textarea
-									name='description'
-									placeholder='Description'
-									value={newItem.description}
-									onChange={handleInputChange}
-									required
-									className='form-input'
-								/>
-							</div>
-							<button
-								type='submit'
-								className='submit-button'
-								disabled={activeTab === 'services' ? loading : designsLoading}
-							>
-								{(activeTab === 'services' ? loading : designsLoading)
-									? 'Processing...'
-									: editing || serviceEditing
-									? 'Update'
-									: 'Add New'}
-							</button>
-							{(editing || serviceEditing) && (
-								<button
-									type='button'
-									className='cancel-button'
-									onClick={() => {
-										setEditing(false);
-										setServiceEditing(false);
-										setCurrentEdit(null);
-										setNewItem({
-											name: '',
-											price: '',
-											category: '',
-											duration: '',
-											description: '',
-											imageUrl: '',
-											isAdditional: false,
-											categoryIds: [],
-											trendScore: '0',
-											serviceId: '',
-											extraPrice: '0',
-										});
-									}}
-								>
-									Cancel
-								</button>
-							)}
-						</form>
+										/> */}
+
+										{/* Color Selection */}
+										<div className='form-group' style={{ gridColumn: 'span 2' }}>
+											<label className='form-label'>Colors (separate IDs with commas):</label>
+											<input
+												type='text'
+												name='colorIds'
+												placeholder='Enter color IDs separated by commas'
+												value={newItem.colorIds ? newItem.colorIds.join(',') : ''}
+												onChange={(e) => {
+													const ids = e.target.value
+														.split(',')
+														.map((id) => id.trim())
+														.filter((id) => id);
+													setNewItem((prev) => ({
+														...prev,
+														colorIds: ids,
+													}));
+												}}
+												className='form-input'
+											/>
+										</div>
+
+										{/* Occasion Selection */}
+										<div className='form-group' style={{ gridColumn: 'span 2' }}>
+											<label className='form-label'>Occasions (separate IDs with commas):</label>
+											<input
+												type='text'
+												name='occasionIds'
+												placeholder='Enter occasion IDs separated by commas'
+												value={newItem.occasionIds ? newItem.occasionIds.join(',') : ''}
+												onChange={(e) => {
+													const ids = e.target.value
+														.split(',')
+														.map((id) => id.trim())
+														.filter((id) => id);
+													setNewItem((prev) => ({
+														...prev,
+														occasionIds: ids,
+													}));
+												}}
+												className='form-input'
+											/>
+										</div>
+
+										{/* Skintone Selection */}
+										<div className='form-group' style={{ gridColumn: 'span 2' }}>
+											<label className='form-label'>Skintones (separate IDs with commas):</label>
+											<input
+												type='text'
+												name='skintoneIds'
+												placeholder='Enter skintone IDs separated by commas'
+												value={newItem.skintoneIds ? newItem.skintoneIds.join(',') : ''}
+												onChange={(e) => {
+													const ids = e.target.value
+														.split(',')
+														.map((id) => id.trim())
+														.filter((id) => id);
+													setNewItem((prev) => ({
+														...prev,
+														skintoneIds: ids,
+													}));
+												}}
+												className='form-input'
+											/>
+										</div>
+
+										{/* Paint Type Selection */}
+										<div className='form-group' style={{ gridColumn: 'span 2' }}>
+											<label className='form-label'>
+												Paint Types (separate IDs with commas):
+											</label>
+											<input
+												type='text'
+												name='paintTypeIds'
+												placeholder='Enter paint type IDs separated by commas'
+												value={newItem.paintTypeIds ? newItem.paintTypeIds.join(',') : ''}
+												onChange={(e) => {
+													const ids = e.target.value
+														.split(',')
+														.map((id) => id.trim())
+														.filter((id) => id);
+													setNewItem((prev) => ({
+														...prev,
+														paintTypeIds: ids,
+													}));
+												}}
+												className='form-input'
+											/>
+										</div>
+
+										{/* Media File Upload */}
+										<div className='form-group' style={{ gridColumn: 'span 2' }}>
+											<label className='form-label'>Upload Design Images:</label>
+											<input
+												type='file'
+												multiple
+												onChange={(e) => {
+													setNewItem((prev) => ({
+														...prev,
+														mediaFiles: Array.from(e.target.files),
+													}));
+												}}
+												className='form-input'
+												accept='image/*'
+											/>
+											<small>You can select multiple images</small>
+										</div>
+
+										{/* Nail Design Association */}
+										<div className='form-group' style={{ gridColumn: 'span 2' }}>
+											<label className='form-label'>Colors (separate IDs with commas):</label>
+											<input
+												type='text'
+												name='nailDesignIds'
+												placeholder='Enter color IDs separated by commas'
+												value={newItem.nailDesignIds ? newItem.nailDesignIds.join(',') : ''}
+												onChange={(e) => {
+													const ids = e.target.value
+														.split(',')
+														.map((id) => id.trim())
+														.filter((id) => id);
+													setNewItem((prev) => ({
+														...prev,
+														nailDesignIds: ids,
+													}));
+												}}
+												className='form-input'
+											/>
+										</div>
+									</div>
+
+									<button type='submit' className='submit-button' disabled={designsLoading}>
+										{designsLoading
+											? 'Processing...'
+											: editing
+											? 'Update Design'
+											: 'Add New Design'}
+									</button>
+									{editing && (
+										<button
+											type='button'
+											className='cancel-button'
+											onClick={() => {
+												setEditing(false);
+												setCurrentEdit(null);
+												setNewItem({
+													name: '',
+													price: '',
+													category: '',
+													duration: '',
+													description: '',
+													imageUrl: '',
+													isAdditional: false,
+													categoryIds: [],
+													trendScore: '0',
+													colorIds: [],
+													occasionIds: [],
+													skintoneIds: [],
+													paintTypeIds: [],
+													mediaFiles: [],
+													nailDesignIds: [],
+													serviceId: '',
+													extraPrice: '0',
+												});
+											}}
+										>
+											Cancel
+										</button>
+									)}
+								</form>
+							</>
+						)}
 					</div>
 
 					<div className='product-list'>
